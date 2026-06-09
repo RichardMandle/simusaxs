@@ -16,20 +16,21 @@ This code takes a molecular dynamics trajectory (e.g., from GROMACS) and does a 
 
 The code is designed to be fast (Numba + FFTW) and flexible - there are lots of ways to control the output, and produce publication-quality simulated SAXS data from MD trajectories.
 
-You can speed up the analysis (although its already pretty fast) by using the *new* multithreaded mode (```-nt```) and specifying the number of CPU threads to use. A rough guide:  
+You can speed up the analysis (although its already pretty fast) by using the *new* multithreaded mode (```-nt```) and specifying the number of CPU threads to use. A rough guide using timings for the structure factor calculation (the most intensive part):  
 
-| ```-nt``` | speedup |
-|-----------|---------|
-| 1 | x1.0 |
-| 2 | x2.2 | 
-| 4 | x2.6 |
-| 8 | x3.2 |
+| ```-nt``` | walltime | speedup |
+|-----------|----------|---------|
+| 1 | 95.0 s | x1.0 |
+| 2 | 53.0 s | x1.8 | 
+| 3 | 41.0 s | x2.3 |
+| 4 | 33.0 s | x2.9 |
+| 8 | 28.0 s | x3.4 |
 
-These done with a M5 processor; 130 frame trajectory with a 54k atom topology, and ```-pad``` set to 100. The plots look pretty nice, and took just 144 seconds from start-to-finish:
+These done with a M5 processor so the drop-off in speedup between 4 threads and 8 threads probaby reflects the archetecture of the CPU somewhat. 130 frame trajectory with a 54k atom topology, and ```-pad``` set to 50. The plots look pretty nice, for example:
 
 <img width="678" height="659" alt="image" src="https://github.com/user-attachments/assets/da319657-b57f-4950-a635-bfcbc0ad7078" />
 
-The RAM usage of this newer version is not as bad (the above example had an estimated useage of ~3GB), but for large zero-paddings it can still easily dwarf what you have on hand
+The RAM usage of this newer version is not as bad (the above example had an estimated useage of ~1.5GB), but for large zero-paddings it can still easily dwarf what you have on hand, so its often best to resort to running on HPC. 
 
 Want to see it in use? https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202416545 (arxiv: https://arxiv.org/abs/2408.15859)
 
@@ -58,13 +59,11 @@ There are of course some other options you might need.
 | -nt   | Control the number of CPU threads used for the FFT calculation (and only the FFT calculation). |
 | -win  | Turn off FFT window filtering
 
-
-
 ### Less Useful Options
 |Option	   |What it does|
 | -------- | ---------- |
 |-qmin / -qmax |	Set Q-space range (nm⁻¹) |
-|-r	| Resolution of the REAL SPACE GRID in nm (default = 0.05). Doesn't change resolution in Q SPACE (see ```-pad```  |
+|-vox | Select size of voxels used for the electron density grid (in nm; default = 0.05) Note, for higher resolution, see ```-pad```  |
 |-int |	Turn on interpolation of SF |
 |-plt	| Generate radial profiles from SAXS images |
 |-lines	| Overlay Q-circles and labels on plots |
