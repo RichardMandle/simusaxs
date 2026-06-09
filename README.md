@@ -9,14 +9,27 @@ _A python tool for simulating and small angle X-ray scattering patterns based on
 This code takes a molecular dynamics trajectory (e.g., from GROMACS) and does a few things:
 
 - Loads and aligns the system along its principal axis of orientation (e.g. the director, for a liquid crystal)
-- Builds 3D electron density maps from atomic coordinates using radii from Bondii
-- Computes the 3D structure factor via FFT
+- On a frame-by-frame basis, build a 3D map of electron density using Bondii atomic radii
+- Computes the 3D structure factor via FFT and padding. These are summed, then windowed, then the accumulated total normalised. So its fairly RAM efficient.
 - Generates nice 2D SAXS images; these are projections (i.e. summations) of the 3DSF along an axis of some sort (with optional radial integration)
-- Supports optional band-pass filtering, resolution tuning, interpolation, and more
+- Supports optional zero-padding, band-pass filtering, resolution tuning, interpolation, and more
 
-The code is designed to be fast (Numba + FFTW) and flexible - there are lots of ways to control the output.
+The code is designed to be fast (Numba + FFTW) and flexible - there are lots of ways to control the output, and produce publication-quality simulated SAXS data from MD trajectories.
 
-Depending on your simulation and the settings you use, the ammount of RAM required can be _very large_. I'll look at fixing this in future.
+You can speed up the analysis (although its already pretty fast) by using the *new* multithreaded mode (```-nt```) and specifying the number of CPU threads to use. A rough guide:  
+
+| ```-nt``` | speedup |
+|-----------|---------|
+| 1 | x1.0 |
+| 2 | x2.2 | 
+| 4 | x2.6 |
+| 8 | x3.2 |
+
+These done with a M5 processor; 130 frame trajectory with a 54k atom topology, and ```-pad``` set to 100. The plots look pretty nice, and took just 144 seconds from start-to-finish:
+
+<img width="678" height="659" alt="image" src="https://github.com/user-attachments/assets/da319657-b57f-4950-a635-bfcbc0ad7078" />
+
+The RAM usage of this newer version is not as bad (the above example had an estimated useage of ~3GB), but for large zero-paddings it can still easily dwarf what you have on hand
 
 Want to see it in use? https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202416545 (arxiv: https://arxiv.org/abs/2408.15859)
 
@@ -35,18 +48,29 @@ You can also reload saved .npz files to skip the heavy lifting:
 ```
 python simusaxs.py -rld output_name
 ```
+There are of course some other options you might need.
 
-### Useful Options
-Option	What it does
--qmin / -qmax	Set Q-space range (nm⁻¹)
--r	Resolution in nm (default = 0.05)
--int	Turn on interpolation of SF
--plt	Generate radial profiles from SAXS images
--lines	Overlay Q-circles and labels on plots
--save	Save edensity and SF to .npz for later
--quietly	Suppress verbose output
--pad	Padding size for FFT (default = 20)
--cmap	Change plot colormap (default = plasma)
+### Most Useful Options
+|Option | What it does |
+| ----- | ------------ |
+| -pad  | Controls zero padding of the structure-factor; meaning you control resolution of the RECIPROCAL SPACE GRID. <br> Bigger value, smoother data (~ 100 is a good start). <br> Can use a lot of RAM. |
+| -cmap | Change the colouring. Use a _perceptually uniform colourmap_ (plasma, magma, viridis, inferno etc) |
+| -nt   | Control the number of CPU threads used for the FFT calculation (and only the FFT calculation). |
+| -win  | Turn off FFT window filtering
+
+
+
+### Less Useful Options
+|Option	   |What it does|
+| -------- | ---------- |
+|-qmin / -qmax |	Set Q-space range (nm⁻¹) |
+|-r	| Resolution of the REAL SPACE GRID in nm (default = 0.05). Doesn't change resolution in Q SPACE (see ```-pad```  |
+|-int |	Turn on interpolation of SF |
+|-plt	| Generate radial profiles from SAXS images |
+|-lines	| Overlay Q-circles and labels on plots |
+|-save	| Save edensity and SF to .npz for later |
+|-quietly	| Suppress verbose output |
+
 Check out python simusaxs.py -h for a full list.
 
 ### Trajectory Requirements
@@ -93,10 +117,9 @@ Next, pass this to simusaxs. We'll use a ```-pad``` of 100 to improve the smooth
 python $HOME/py_files/simusaxs/simusaxs.py -top confout.gro -traj simusaxs_traj.trr -pad 100
 ```
 
-### Future Plans
-Reduce memory use by chunking the trajectory
-Calculate the SF per frame, but only store its cumulative total
+For production work you can use larger values of ```-pad``` on your HPC, but the RAM requirements can become extreme.
+
 
 ### Credit
-Written by R.J.M @ University of Leeds, 2023/2024
+Written by R.J.M @ University of Leeds, 2023-2026
 This code is a work in progress
