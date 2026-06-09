@@ -35,6 +35,24 @@ The RAM usage of this newer version is not as bad (the above example had an esti
 Want to see it in use? https://onlinelibrary.wiley.com/doi/full/10.1002/anie.202416545 (arxiv: https://arxiv.org/abs/2408.15859)
 
 ---
+## Installation
+
+`simusaxs.py` is a standalone Python script. The recommended installation is to place it in a small project directory and run it from a dedicated virtual environment.
+
+### 1. Download the code
+
+```
+wget https://raw.githubusercontent.com/RichardMandle/simusaxs/main/simusaxs.py
+wget https://raw.githubusercontent.com/RichardMandle/simusaxs/main/atomic_radii.txt
+chmod +x simusaxs.py
+```
+
+### 2. Install dependencies
+
+```
+pip install numpy scipy matplotlib tqdm psutil numba mdtraj pyfftw
+```
+
 
 ### Quick Start
 
@@ -104,7 +122,7 @@ If you're running on HPC: the script switches matplotlib to AGG to avoid display
 You can adjust Q-step size manually with -stp, or let it auto-pick based on Q-range.
 If RAM is tight, consider reducing resolution or using fewer frames.
 Typically using the normal resolution and a larger value of padding gives better results than setting arbitrarily large resolutions.
-Setting resolution via -res controls the resoltion of the _real_ space electron grid; if you want to control the resolution of the _reciprocal_ space SAXS projection, you should use -pad 
+Setting resolution via -vox controls the spatial dimensions of the voxels that make up the _real_ space electron grid; if you want to control the resolution of the _reciprocal_ space SAXS projection, you should use -pad 200 (or bigger) for production quality data)
 
 ### Real Workflow
 First, make molecules whole across the PBC using gromacs:
@@ -116,7 +134,16 @@ Next, pass this to simusaxs. We'll use a ```-pad``` of 100 to improve the smooth
 python $HOME/py_files/simusaxs/simusaxs.py -top confout.gro -traj simusaxs_traj.trr -pad 100
 ```
 
-For production work you can use larger values of ```-pad``` on your HPC, but the RAM requirements can become extreme.
+For production work you can use even larger values of ```-pad``` , but the RAM requirements can become extreme. We'll use extra cores to speed it up, and use a different colourmap (_magma_). We might also use -qmin to clip out FFT noise at the centre:
+
+```
+python $HOME/py_files/simusaxs/simusaxs.py -top confout.gro -traj simusaxs_traj.trr -pad 300 -qmin 0.7 -cmap magma -nt 4
+```
+
+<<TO DO>>
+add some descriptor for doing it on HPC and submitting via ```sbatch --wrap```
+
+
 
 
 ### Credit
